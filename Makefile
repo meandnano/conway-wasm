@@ -4,11 +4,11 @@ help: ## Display this help.
 
 .PHONY: wasm
 wasm: ## build the game part (WASM)
-	tinygo build -o ./backend/assets/game.wasm -target wasm ./game/main.go 
+	cd game && tinygo build -o ../backend/assets/game.wasm -target wasm ./main.go 
 
 .PHONY: backend
 backend: ## build the backend part 
-	go build -o ./bin/conway ./backend/main.go
+	cd backend && go build -o ../bin/conway ./main.go
 
 
 .PHONY: app
