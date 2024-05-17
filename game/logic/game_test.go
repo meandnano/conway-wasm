@@ -297,6 +297,49 @@ func TestPopulateRandom(t *testing.T) {
 	}
 }
 
+func TestGameCycle(t *testing.T) {
+	//  0 1 2 3 4 5
+	//0 x x o o o o
+	//1 o x o o o o
+	//2 o o o o o o
+	//3 o o o o o o
+	//4 o o o o o o
+	//5 o o o o o o
+
+	g := logic.NewGame(6, 6)
+	g.CellAt(0, 0).Alive = true
+	g.CellAt(0, 1).Alive = true
+	g.CellAt(1, 1).Alive = true
+
+	g.Cycle()
+
+	g.Traverse(func(x, y uint, c *logic.Cell) {
+		if x == 0 && y == 0 {
+			assertCellAlive(t, 0, 0, c)
+		} else if x == 0 && y == 1 {
+			assertCellAlive(t, 0, 1, c)
+		} else if x == 1 && y == 1 {
+			assertCellAlive(t, 1, 1, c)
+		} else if x == 1 && y == 0 {
+			assertCellAlive(t, 1, 0, c) // new-born cell
+		} else {
+			assertCellDead(t, x, y, c)
+		}
+	})
+}
+
+func assertCellAlive(t *testing.T, x, y uint, c *logic.Cell) {
+	if !c.Alive {
+		t.Fatalf("cell [%d,%d] expected to be alive, but was dead", x, y)
+	}
+}
+
+func assertCellDead(t *testing.T, x, y uint, c *logic.Cell) {
+	if c.Alive {
+		t.Fatalf("cell [%d,%d] expected to be dead, but was alive", x, y)
+	}
+}
+
 func assertLocation(t *testing.T, expX, expY, gotX, gotY uint) {
 	if expX != gotX || expY != gotY {
 		t.Fatalf("expected location [%d,%d], got [%d,%d]", expX, expY, gotX, gotY)

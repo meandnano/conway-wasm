@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 )
 
@@ -55,6 +56,33 @@ func NewGame(w, h uint32) *Game {
 	}
 }
 
+func (g *Game) CellAt(x, y uint) *Cell {
+	if x >= g.width || y >= g.height {
+		return nil
+	}
+	return g.board[x][y]
+}
+func (g *Game) WidthInCells() uint {
+	return g.width
+}
+
+func (g *Game) HeightInCells() uint {
+	return g.height
+}
+
+func (g *Game) Print(w io.Writer) {
+	for x := uint(0); x < g.width; x++ {
+		for y := uint(0); y < g.height; y++ {
+			ch := "o "
+			if g.board[x][y].Alive {
+				ch = "x "
+			}
+			_, _ = w.Write([]byte(ch))
+		}
+		_, _ = w.Write([]byte("\n"))
+	}
+}
+
 func (g *Game) PopulateRandom(aliveCount uint) error {
 	if aliveCount > uint(g.width*g.height) {
 		return fmt.Errorf("too many alive cells wanted: %d, only %d cells are available", aliveCount, g.width*g.height)
@@ -73,15 +101,33 @@ func (g *Game) PopulateRandom(aliveCount uint) error {
 	return nil
 }
 
-func (g *Game) Cycle() {
+func (g *Game) Cycle() bool {
+	changed := false
+
 	g.Traverse(func(x, y uint, c *Cell) {
 		neighbours := uint8(0)
 		g.EachNeighbour(x, y, func(x, y uint, c *Cell) {
-			neighbours++
+			if c.Alive {
+				neighbours++
+			}
 		})
 
-		c.React(neighbours)
+		if c.React(neighbours) != SAME && !changed {
+			changed = true
+		}
 	})
+
+	return changed
+}
+
+func (g *Game) EachColumn(x uint, f func(y uint, c *Cell)) {
+	if x >= g.width {
+		return
+	}
+
+	for y := uint(0); y < g.height; y++ {
+		f(y, g.board[x][y])
+	}
 }
 
 // traverse calls f on each cell on the board width-first
