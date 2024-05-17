@@ -1,3 +1,3 @@
-module github.com/meandnano/convey-web
+module github.com/meandnano/conway-web
 
 go 1.22.2
