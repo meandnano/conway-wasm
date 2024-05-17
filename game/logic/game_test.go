@@ -9,21 +9,21 @@ import (
 func TestNeigbours(t *testing.T) {
 	t.Run("empty-board", func(t *testing.T) {
 		g := logic.NewGame(0, 0)
-		g.EachNeighbour(1, 1, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(1, 1, func(x, y uint, c *logic.Cell) {
 			t.Fatalf("neighbour found on empty board at [%d,%d]", x, y)
 		})
 	})
 
 	t.Run("no-neighbours", func(t *testing.T) {
 		g := logic.NewGame(1, 1)
-		g.EachNeighbour(0, 0, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(0, 0, func(x, y uint, c *logic.Cell) {
 			t.Fatalf("neighbour found on single-cell board at [%d,%d]", x, y)
 		})
 	})
 
 	t.Run("single-neighbour", func(t *testing.T) {
 		g := logic.NewGame(1, 2) // 2 cells
-		g.EachNeighbour(0, 0, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(0, 0, func(x, y uint, c *logic.Cell) {
 			if x != 0 || y != 1 {
 				t.Fatalf("wrong neighbour found at [%d,%d], expected only [0,1]", x, y)
 			}
@@ -37,7 +37,7 @@ func TestNeigbours(t *testing.T) {
 
 		g := logic.NewGame(3, 3) // 2 cells
 		neighbourCount := 0
-		g.EachNeighbour(1, 1, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(1, 1, func(x, y uint, c *logic.Cell) {
 			neighbourCount++
 			switch neighbourCount {
 			case 1:
@@ -68,7 +68,7 @@ func TestNeigbours(t *testing.T) {
 		// o o o
 		g := logic.NewGame(3, 3) // 2 cells
 		neighbourCount := 0
-		g.EachNeighbour(1, 2, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(1, 2, func(x, y uint, c *logic.Cell) {
 			neighbourCount++
 			switch neighbourCount {
 			case 1:
@@ -93,7 +93,7 @@ func TestNeigbours(t *testing.T) {
 		// o o x
 		g := logic.NewGame(3, 3) // 2 cells
 		neighbourCount := 0
-		g.EachNeighbour(2, 2, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(2, 2, func(x, y uint, c *logic.Cell) {
 			neighbourCount++
 			switch neighbourCount {
 			case 1:
@@ -112,14 +112,14 @@ func TestNeigbours(t *testing.T) {
 func TestTraverse(t *testing.T) {
 	t.Run("empty-board", func(t *testing.T) {
 		g := logic.NewGame(0, 0)
-		g.Traverse(func(x, y int32, c *logic.Cell) {
+		g.Traverse(func(x, y uint, c *logic.Cell) {
 			t.Fatalf("cell found on empty board at [%d,%d]", x, y)
 		})
 	})
 
 	t.Run("single-cell", func(t *testing.T) {
 		g := logic.NewGame(1, 1)
-		g.Traverse(func(x, y int32, c *logic.Cell) {
+		g.Traverse(func(x, y uint, c *logic.Cell) {
 			assertLocation(t, 0, 0, x, y)
 		})
 	})
@@ -127,7 +127,7 @@ func TestTraverse(t *testing.T) {
 	t.Run("proper-board", func(t *testing.T) {
 		g := logic.NewGame(2, 2) // 2 cells
 		cellCount := 0
-		g.EachNeighbour(1, 1, func(x, y int32, c *logic.Cell) {
+		g.EachNeighbour(1, 1, func(x, y uint, c *logic.Cell) {
 			cellCount++
 			switch cellCount {
 			case 1:
@@ -147,7 +147,7 @@ func TestTraverse(t *testing.T) {
 	t.Run("uneven-board", func(t *testing.T) {
 		g := logic.NewGame(2, 3) // 2 cells
 		cellCount := 0
-		g.Traverse(func(x, y int32, c *logic.Cell) {
+		g.Traverse(func(x, y uint, c *logic.Cell) {
 			cellCount++
 			switch cellCount {
 			case 1:
@@ -233,7 +233,71 @@ func TestCellReact(t *testing.T) {
 	}
 }
 
-func assertLocation(t *testing.T, expX, expY, gotX, gotY int32) {
+func TestPopulateRandom(t *testing.T) {
+	tests := []struct {
+		name          string
+		boardW        uint32
+		boardH        uint32
+		wantPopulated uint
+		wantError     bool
+	}{
+		{
+			name:          "empty",
+			wantPopulated: 1,
+			wantError:     true,
+		},
+		{
+			name:          "want-too-many",
+			boardW:        2,
+			boardH:        2,
+			wantPopulated: 10,
+			wantError:     true,
+		},
+		{
+			name:          "single",
+			boardW:        1,
+			boardH:        1,
+			wantPopulated: 1,
+		},
+		{
+			name:          "half",
+			boardW:        10,
+			boardH:        10,
+			wantPopulated: 50,
+		},
+		{
+			name:          "no-population",
+			boardW:        10,
+			boardH:        10,
+			wantPopulated: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := logic.NewGame(tt.boardW, tt.boardH)
+			gotErr := g.PopulateRandom(tt.wantPopulated)
+			if tt.wantError {
+				if gotErr == nil {
+					t.Fatalf("wanted error got nil with board {%d,%d}, populating %d cell(s)", tt.boardW, tt.boardH, tt.wantPopulated)
+				}
+			} else {
+				gotAlive := uint(0)
+				g.Traverse(func(_, _ uint, c *logic.Cell) {
+					if c.Alive {
+						gotAlive++
+					}
+				})
+
+				if tt.wantPopulated != gotAlive {
+					t.Fatalf("wanted %d cells populated, got %d", tt.wantPopulated, gotAlive)
+				}
+			}
+		})
+	}
+}
+
+func assertLocation(t *testing.T, expX, expY, gotX, gotY uint) {
 	if expX != gotX || expY != gotY {
 		t.Fatalf("expected location [%d,%d], got [%d,%d]", expX, expY, gotX, gotY)
 	}
