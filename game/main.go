@@ -22,7 +22,7 @@ func main() {
 	height := float64(cvs.Height())
 	width := float64(cvs.Width())
 
-	game := logic.NewGame(100, 120)
+	game := logic.NewGame(100, 100)
 	if err := game.PopulateRandom(1000); err != nil {
 		fmt.Printf("error populating: %s\n", err)
 		return
