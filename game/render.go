@@ -18,21 +18,21 @@ type Renderer struct {
 	cellRadiusPx  float64
 	cellPaddingPx float64
 
-	aliveColor color.RGBA
-	deadColor  color.RGBA
+	cellColor color.RGBA
+	bgColor   color.RGBA
 }
 
 type RendererOpt func(r *Renderer)
 
-func WithAliveColor(c color.RGBA) RendererOpt {
+func WithCellColor(c color.RGBA) RendererOpt {
 	return func(r *Renderer) {
-		r.aliveColor = c
+		r.cellColor = c
 	}
 }
 
-func WithDeadColor(c color.RGBA) RendererOpt {
+func WithBgColor(c color.RGBA) RendererOpt {
 	return func(r *Renderer) {
-		r.deadColor = c
+		r.bgColor = c
 	}
 }
 
@@ -54,8 +54,8 @@ func NewRenderer(g *logic.Game, canvasW, canvasH float64, opts ...RendererOpt) *
 		cellRadiusPx:  radius,
 		cellPaddingPx: 10,
 
-		deadColor:  color.RGBA{0xFF, 0xFF, 0xFF, 0xFF},
-		aliveColor: color.RGBA{0, 0, 0, 0xFF},
+		bgColor:   color.RGBA{0xFF, 0xFF, 0xFF, 0xFF},
+		cellColor: color.RGBA{0, 0, 0, 0xFF},
 	}
 
 	for _, o := range opts {
@@ -68,20 +68,21 @@ func NewRenderer(g *logic.Game, canvasW, canvasH float64, opts ...RendererOpt) *
 // Render renders the game
 func (r *Renderer) Render(gc *draw2dimg.GraphicContext) bool {
 	gc.Clear()
+	gc.SetFillColor(r.bgColor)
+	draw2dkit.Rectangle(gc, 0, 0, r.boardWidthPx, r.boardHeightPx)
+	gc.FillStroke()
 
 	// render the game board
 	for xCell := uint(0); xCell < r.game.WidthInCells(); xCell++ {
 		r.game.EachColumn(xCell, func(y uint, c *logic.Cell) {
+			if !c.Alive {
+				return
+			}
+
 			cx := float64(xCell)*r.cellRadiusPx + r.cellRadiusPx/2
 			cy := float64(y)*r.cellRadiusPx + r.cellRadiusPx/2
 
-			gc.SetStrokeColor(color.Transparent)
-			if c.Alive {
-				gc.SetFillColor(r.aliveColor)
-			} else {
-				gc.SetFillColor(r.deadColor)
-			}
-
+			gc.SetFillColor(r.cellColor)
 			gc.BeginPath()
 			draw2dkit.Circle(gc, cx, cy, r.cellRadiusPx-r.cellPaddingPx/2)
 			// gc.MoveTo(cx, cy)
